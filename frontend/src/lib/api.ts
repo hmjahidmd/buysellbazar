@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 interface RequestOptions extends RequestInit {
   token?: string;
@@ -49,11 +49,30 @@ export async function apiClient<T = any>(
     ...customConfig,
   });
 
-  const json = await response.json();
+  const text = await response.text();
+  let json: any = null;
+
+  if (text) {
+    try {
+      json = JSON.parse(text);
+    } catch {
+      throw new Error(
+        response.ok
+          ? 'Server returned an invalid response. Please try again.'
+          : `Login API failed (${response.status}). Check Vercel env vars and MongoDB Atlas Network Access.`
+      );
+    }
+  } else if (!response.ok) {
+    throw new Error(
+      `Login API failed (${response.status}). MongoDB Atlas may be blocking Vercel IPs — allow 0.0.0.0/0 in Network Access.`
+    );
+  } else {
+    throw new Error('Server returned an empty response. Please try again.');
+  }
 
   if (!response.ok) {
-    const errorMsg = json?.error?.message || json?.message || 'API request failed';
-    throw new Error(errorMsg);
+    const errorMsg = json?.error?.message || json?.error || json?.message || 'API request failed';
+    throw new Error(typeof errorMsg === 'string' ? errorMsg : 'API request failed');
   }
 
   return json;

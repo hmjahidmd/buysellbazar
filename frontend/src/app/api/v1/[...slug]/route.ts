@@ -3,9 +3,26 @@ import mongoose, { Schema } from 'mongoose';
 import jwt from 'jsonwebtoken';
 import { connectToDatabase } from '../../../../lib/db';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const JWT_SECRET =
   process.env.JWT_ACCESS_SECRET ||
   'your_ultra_secure_jwt_access_secret_key_minimum_32_characters';
+
+type RouteContext = { params: { slug: string[] } | Promise<{ slug: string[] }> };
+
+async function getSlug(context: RouteContext): Promise<string> {
+  const params = await Promise.resolve(context.params);
+  return (params?.slug || []).join('/');
+}
+
+function fail(message: string, status = 500) {
+  return NextResponse.json(
+    { success: false, error: { message }, message },
+    { status }
+  );
+}
 
 // Define Mongoose Models (re-usable across serverless invocations)
 const UserSchema = new Schema(
@@ -121,9 +138,10 @@ function getAuthUser(req: NextRequest): { userId: string; mobileNumber: string }
 // -------------------------------------------------------------
 // GET Handler
 // -------------------------------------------------------------
-export async function GET(req: NextRequest, { params }: { params: { slug: string[] } }) {
+export async function GET(req: NextRequest, context: RouteContext) {
+  try {
   await connectToDatabase();
-  const slug = params.slug.join('/');
+  const slug = await getSlug(context);
   const url = new URL(req.url);
 
   // 1. GET /api/v1/listings/search
@@ -246,23 +264,29 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   }
 
   return NextResponse.json({ success: false, error: 'Route not found' }, { status: 404 });
+  } catch (err: any) {
+    console.error('GET /api/v1 failed', err);
+    return fail(err?.message || 'Internal server error');
+  }
 }
 
 // -------------------------------------------------------------
 // POST Handler
 // -------------------------------------------------------------
-export async function POST(req: NextRequest, { params }: { params: { slug: string[] } }) {
-  await connectToDatabase();
-  const slug = params.slug.join('/');
+export async function POST(req: NextRequest, context: RouteContext) {
+  try {
+  const slug = await getSlug(context);
   let body: any = {};
   try {
     body = await req.json();
   } catch {}
 
-  // 1. POST /api/v1/auth/request-otp
+  // 1. POST /api/v1/auth/request-otp — no DB required (sandbox OTP)
   if (slug === 'auth/request-otp') {
     return NextResponse.json({ success: true, expiresInSeconds: 180 });
   }
+
+  await connectToDatabase();
 
   // 2. POST /api/v1/auth/verify-otp
   if (slug === 'auth/verify-otp') {
@@ -477,14 +501,19 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
   }
 
   return NextResponse.json({ success: false, error: 'Route not found' }, { status: 404 });
+  } catch (err: any) {
+    console.error('POST /api/v1 failed', err);
+    return fail(err?.message || 'Internal server error');
+  }
 }
 
 // -------------------------------------------------------------
 // PATCH Handler
 // -------------------------------------------------------------
-export async function PATCH(req: NextRequest, { params }: { params: { slug: string[] } }) {
+export async function PATCH(req: NextRequest, context: RouteContext) {
+  try {
   await connectToDatabase();
-  const slug = params.slug.join('/');
+  const slug = await getSlug(context);
   let body: any = {};
   try {
     body = await req.json();
@@ -534,14 +563,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { slug: stri
   }
 
   return NextResponse.json({ success: false, error: 'Route not found' }, { status: 404 });
+  } catch (err: any) {
+    console.error('PATCH /api/v1 failed', err);
+    return fail(err?.message || 'Internal server error');
+  }
 }
 
 // -------------------------------------------------------------
 // DELETE Handler
 // -------------------------------------------------------------
-export async function DELETE(req: NextRequest, { params }: { params: { slug: string[] } }) {
+export async function DELETE(req: NextRequest, context: RouteContext) {
+  try {
   await connectToDatabase();
-  const slug = params.slug.join('/');
+  const slug = await getSlug(context);
 
   // DELETE /api/v1/listings/:id (Soft-Delete)
   if (slug.startsWith('listings/')) {
@@ -551,4 +585,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { slug: str
   }
 
   return NextResponse.json({ success: false, error: 'Route not found' }, { status: 404 });
+  } catch (err: any) {
+    console.error('DELETE /api/v1 failed', err);
+    return fail(err?.message || 'Internal server error');
+  }
 }

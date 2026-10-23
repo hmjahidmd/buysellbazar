@@ -16,20 +16,25 @@ export async function connectToDatabase() {
   }
 
   if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-    };
-
-    cached.promise = mongoose.connect(DEFAULT_MONGO_URI, opts).then((m) => {
-      return m;
-    });
+    cached.promise = mongoose
+      .connect(DEFAULT_MONGO_URI, {
+        bufferCommands: false,
+        maxPoolSize: 5,
+        serverSelectionTimeoutMS: 8000,
+        socketTimeoutMS: 20000,
+        connectTimeoutMS: 8000,
+      })
+      .then((m) => m);
   }
 
   try {
     cached.conn = await cached.promise;
-  } catch (e) {
+  } catch (e: any) {
     cached.promise = null;
-    throw e;
+    const reason = e?.message || 'unknown error';
+    throw new Error(
+      `MongoDB Atlas connection failed (${reason}). In Atlas → Network Access, allow 0.0.0.0/0, and set MONGO_URI on Vercel.`
+    );
   }
 
   return cached.conn;
