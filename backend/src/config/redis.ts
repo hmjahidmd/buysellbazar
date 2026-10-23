@@ -49,18 +49,16 @@ export const connectRedis = async (): Promise<void> => {
       await client.connect();
     }
   } catch (error) {
-    if (env.NODE_ENV === 'development') {
-      logger.warn('⚠️ Local Redis not reachable on port 6379. Switching to in-memory Redis mock for local development preview...');
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const RedisMock = require('ioredis-mock');
-        redisClient = new RedisMock();
-        isMockMode = true;
-        logger.info('✨ In-memory Redis mock initialized successfully.');
-        return;
-      } catch (mockErr) {
-        logger.error('Failed to init in-memory Redis mock:', mockErr);
-      }
+    logger.warn('⚠️ External Redis not reachable. Switching to in-memory Redis mock for production stability...');
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const RedisMock = require('ioredis-mock');
+      redisClient = new RedisMock();
+      isMockMode = true;
+      logger.info('✨ In-memory Redis mock initialized successfully.');
+      return;
+    } catch (mockErr) {
+      logger.error('Failed to init in-memory Redis mock:', mockErr);
     }
     logger.warn('⚠️ Redis connection failed. Operating in degraded mode: ', error);
   }
