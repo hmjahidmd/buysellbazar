@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "build": "rimraf dist && tsc",
+    "build": "tsc",
     "test": "jest",
     "start": "node dist/server.js",
     "lint": "eslint . --ext .ts",
@@ -31,11 +31,14 @@
     "express": "^4.19.2",
     "helmet": "^7.1.0",
     "ioredis": "^5.11.1",
+    "ioredis-mock": "^8.13.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.5.2",
     "multer": "^1.4.5-lts.1",
+    "rimraf": "^6.0.1",
     "sharp": "^0.33.4",
     "socket.io": "^4.7.5",
+    "typescript": "^5.5.4",
     "uuid": "^10.0.0",
     "winston": "^3.14.2",
     "zod": "^3.23.8"
@@ -52,13 +55,10 @@
     "@types/node": "^20.14.14",
     "@types/supertest": "^7.2.1",
     "@types/uuid": "^10.0.0",
-    "ioredis-mock": "^8.13.1",
     "jest": "^30.5.2",
     "mongodb-memory-server": "^11.3.0",
-    "rimraf": "^6.0.1",
     "supertest": "^7.3.1",
     "ts-jest": "^29.4.15",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.5.4"
+    "ts-node-dev": "^2.0.0"
   }
 }
