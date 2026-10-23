@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Next.js Build Outputs
+.next/
+*/.next/
+out/
+*/out/
+
+# TypeScript / Node Build Outputs
+dist/
+*/dist/
+build/
+*/build/
+
+# Local Embedded Database & Cache
+backend/data/
+*/data/mongodb/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files with sensitive credentials
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+frontend/.env.local
+
+# macOS metadata & AppleDouble files
+.DS_Store
+._*
+*/._*
+Thumbs.db
