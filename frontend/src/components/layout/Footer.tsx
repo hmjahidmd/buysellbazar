@@ -21,14 +21,14 @@ export const Footer: React.FC = () => {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-6 text-xs text-emerald-100 font-medium">
-            <span className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-emerald-100 font-medium sm:gap-6">
+            <span className="flex min-w-0 items-center gap-1.5">
               <CheckCircle2 size={16} className="text-verified-blue" /> NID 3D Liveness Verified
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex min-w-0 items-center gap-1.5">
               <Lock size={16} className="text-brand-accent" /> Virtual Masked Calling
             </span>
-            <span className="flex items-center gap-1.5">
+            <span className="flex min-w-0 items-center gap-1.5">
               <AlertTriangle size={16} className="text-brand-red" /> Anti-Fraud Chat Shield
             </span>
           </div>
@@ -37,7 +37,7 @@ export const Footer: React.FC = () => {
 
       {/* Main Footer Links */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 min-[480px]:grid-cols-2 md:grid-cols-4 gap-8">
           <div>
             <h5 className="text-white font-bold text-sm uppercase tracking-wider mb-4">
               Popular Categories
@@ -149,7 +149,7 @@ export const Footer: React.FC = () => {
               <span className="text-lg font-black text-white tracking-wide block">
                 +880 9612-345678
               </span>
-              <span className="text-[11px] text-emerald-400 block mt-1">
+              <span className="break-all text-[11px] text-emerald-400 block mt-1">
                 support@marketplace.com.bd
               </span>
             </div>

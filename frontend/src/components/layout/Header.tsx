@@ -15,6 +15,8 @@ import {
   LogOut,
   Store,
   Layers,
+  Menu,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import VerifiedBadge from '../ui/VerifiedBadge';
@@ -39,6 +41,7 @@ export const Header: React.FC = () => {
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,11 +56,12 @@ export const Header: React.FC = () => {
       {/* Top Banner / Trust Micro-Bar */}
       <div className="bg-emerald-950 text-emerald-100 text-xs py-1 px-4 text-center font-medium flex items-center justify-center gap-2">
         <ShieldCheck size={14} className="text-verified-blue" />
-        <span>Bangladesh's 1st 100% NID-Verified & Anti-Scam Protected Marketplace</span>
+        <span className="hidden sm:inline">Bangladesh's 1st 100% NID-Verified & Anti-Scam Protected Marketplace</span>
+        <span className="sm:hidden">Verified marketplace for safer local trading</span>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 md:flex-nowrap md:justify-between md:h-16 md:gap-4 md:py-0">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 shrink-0">
             <div className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center text-white font-black text-xl tracking-tighter shadow-md">
@@ -107,7 +111,7 @@ export const Header: React.FC = () => {
           </div>
 
           {/* Main Search Bar */}
-          <form onSubmit={handleSearch} className="flex-1 max-w-xl relative">
+          <form onSubmit={handleSearch} className="order-3 relative w-full max-w-none md:order-none md:flex-1 md:max-w-xl">
             <div className="relative flex items-center">
               <input
                 type="text"
@@ -126,9 +130,9 @@ export const Header: React.FC = () => {
           </form>
 
           {/* User & Actions */}
-          <div className="flex items-center gap-3">
+          <div className="ml-auto flex shrink-0 items-center gap-1.5 md:gap-3">
             {isAuthenticated ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 md:gap-2">
                 <Link
                   href="/chat"
                   className="p-2 text-slate-600 hover:text-brand-primary hover:bg-slate-100 rounded-lg transition-colors relative"
@@ -140,7 +144,7 @@ export const Header: React.FC = () => {
                 <div className="relative">
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center gap-2 p-1.5 pl-2 border border-slate-200 hover:border-slate-300 rounded-xl transition-colors bg-white"
+                    className="flex items-center gap-1 p-1.5 md:gap-2 md:pl-2 border border-slate-200 hover:border-slate-300 rounded-xl transition-colors bg-white"
                   >
                     {user?.profile?.avatarUrl ? (
                       <img
@@ -153,7 +157,7 @@ export const Header: React.FC = () => {
                         {(user?.profile?.displayName || user?.mobileNumber || 'U')[0].toUpperCase()}
                       </div>
                     )}
-                    <div className="flex flex-col text-left">
+                    <div className="hidden sm:flex flex-col text-left">
                       <div className="flex items-center gap-1">
                         <span className="text-xs font-bold text-slate-800 max-w-[100px] truncate">
                           {user?.profile?.displayName || user?.mobileNumber}
@@ -164,7 +168,7 @@ export const Header: React.FC = () => {
                         {user?.role}
                       </span>
                     </div>
-                    <ChevronDown size={14} className="text-slate-400" />
+                    <ChevronDown size={14} className="hidden sm:block text-slate-400" />
                   </button>
 
                   {isUserMenuOpen && (
@@ -225,7 +229,7 @@ export const Header: React.FC = () => {
             ) : (
               <button
                 onClick={openLoginModal}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-brand-primary hover:bg-emerald-50 rounded-xl transition-colors"
+                className="flex items-center gap-1 px-2.5 py-2 text-sm font-semibold text-brand-primary hover:bg-emerald-50 rounded-xl transition-colors md:gap-1.5 md:px-4"
               >
                 <UserIcon size={18} />
                 <span>Login</span>
@@ -235,13 +239,43 @@ export const Header: React.FC = () => {
             {/* Post Ad Button */}
             <Link
               href="/post-ad"
-              className="flex items-center gap-1.5 px-4 py-2 bg-brand-accent text-slate-950 font-bold text-sm rounded-xl hover:bg-amber-400 transition-all shadow-sm"
+              className="flex items-center gap-1 p-2 bg-brand-accent text-slate-950 font-bold text-sm rounded-xl hover:bg-amber-400 transition-all shadow-sm md:gap-1.5 md:px-4"
+              aria-label="Post an ad"
             >
               <PlusCircle size={18} />
-              <span>POST AD</span>
+              <span className="hidden sm:inline">POST AD</span>
             </Link>
+
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen((open) => !open)}
+              className="p-2 text-slate-700 hover:bg-slate-100 rounded-lg md:hidden"
+              aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-navigation"
+            >
+              {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
           </div>
         </div>
+
+        {isMobileMenuOpen && (
+          <nav id="mobile-navigation" className="md:hidden border-t border-slate-200 py-2" aria-label="Mobile navigation">
+            <Link href="/search" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg">Browse listings</Link>
+            {isAuthenticated ? (
+              <>
+                <Link href="/profile" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg">My dashboard</Link>
+                <Link href="/chat" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg">Messages</Link>
+                {(user?.role === 'admin' || user?.role === 'moderator') && (
+                  <Link href="/admin/moderation" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2.5 text-sm font-semibold text-amber-800 hover:bg-amber-50 rounded-lg">Admin moderation</Link>
+                )}
+              </>
+            ) : (
+              <button type="button" onClick={() => { setIsMobileMenuOpen(false); openLoginModal(); }} className="block w-full text-left px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 rounded-lg">Sign in</button>
+            )}
+            <Link href="/post-ad" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-2.5 text-sm font-bold text-emerald-800 hover:bg-emerald-50 rounded-lg">Post an ad</Link>
+          </nav>
+        )}
       </div>
     </header>
   );

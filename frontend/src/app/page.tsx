@@ -140,20 +140,20 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4 gap-4">
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon;
             return (
               <Link
                 key={cat.name}
                 href={`/search?category=${encodeURIComponent(cat.name)}`}
-                className="flex items-center gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-brand-primary/50 hover:shadow-md transition-all group"
+                className="flex min-w-0 items-center gap-4 p-4 rounded-2xl bg-white border border-slate-200 hover:border-brand-primary/50 hover:shadow-md transition-all group"
               >
-                <div className={`p-3 rounded-xl ${cat.color} group-hover:scale-110 transition-transform`}>
+                <div className={`shrink-0 p-3 rounded-xl ${cat.color} group-hover:scale-110 transition-transform`}>
                   <Icon size={24} />
                 </div>
-                <div>
-                  <h3 className="font-bold text-slate-800 text-sm group-hover:text-brand-primary transition-colors">
+                <div className="min-w-0">
+                  <h3 className="break-words font-bold text-slate-800 text-sm group-hover:text-brand-primary transition-colors">
                     {cat.name}
                   </h3>
                   <span className="text-xs text-slate-400 font-medium">{cat.count}</span>

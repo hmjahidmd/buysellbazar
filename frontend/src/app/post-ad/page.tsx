@@ -55,6 +55,8 @@ export default function PostAdPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [specValues, setSpecValues] = useState<Record<string, string>>({});
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const specFields = fieldsForCategory(category);
 
   if (!isAuthenticated) {
@@ -110,9 +112,6 @@ export default function PostAdPage() {
       </div>
     );
   }
-
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
 
   const handleRealImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
