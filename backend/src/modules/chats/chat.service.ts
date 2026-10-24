@@ -152,7 +152,7 @@ export class ChatService {
       'profile.displayName profile.avatarUrl isNidVerified ratingAverage ratingCount'
     );
 
-    if (!listing || listing.status === 'DELETED') {
+    if (!listing || listing.status !== 'ACTIVE' || listing.expiresAt <= new Date()) {
       throw new NotFoundError('Listing not found or has been removed');
     }
 
@@ -192,6 +192,15 @@ export class ChatService {
    */
   public static async getMessageHistory(userId: string, roomId: string, page = 1, limit = 50) {
     const userObjectId = new Types.ObjectId(userId);
+    const [prefix, listingId, buyerId] = roomId.split('_');
+    if (prefix !== 'room' || !Types.ObjectId.isValid(listingId) || !Types.ObjectId.isValid(buyerId)) {
+      throw new BadRequestError('Invalid roomId format');
+    }
+    const listing = await Listing.findById(listingId).select('sellerId');
+    if (!listing) throw new NotFoundError('Associated listing not found');
+    if (userId !== buyerId && !listing.sellerId.equals(userObjectId)) {
+      throw new ForbiddenError('You are not a participant in this conversation');
+    }
     const skip = (page - 1) * limit;
 
     const [total, messages] = await Promise.all([
@@ -242,9 +251,16 @@ export class ChatService {
     const listingId = parts[1];
     const buyerId = parts[2];
 
+    if (parts[0] !== 'room' || !Types.ObjectId.isValid(listingId) || !Types.ObjectId.isValid(buyerId)) {
+      throw new BadRequestError('Invalid roomId format');
+    }
     const listing = await Listing.findById(listingId);
-    if (!listing) {
+    if (!listing || ['PENDING', 'REJECTED', 'SUSPENDED', 'DELETED'].includes(listing.status)) {
       throw new NotFoundError('Associated listing not found');
+    }
+
+    if (senderId !== buyerId && !listing.sellerId.equals(senderId)) {
+      throw new ForbiddenError('You are not a participant in this conversation');
     }
 
     const recipientId = senderId === buyerId ? listing.sellerId.toString() : buyerId;

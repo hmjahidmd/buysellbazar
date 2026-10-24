@@ -1,8 +1,61 @@
 import { Request, Response, NextFunction } from 'express';
 import { ModerationService } from './moderation.service';
+import { ListingService } from '../listings/listing.service';
 import { sendSuccess } from '../../core/utils/response';
 
 export class ModerationController {
+  public static async getAdminListings(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await ListingService.getAdminListings(
+        { q: req.query.q as string | undefined, status: req.query.status as string | undefined },
+        req.query.page ? Number(req.query.page) : 1,
+        req.query.limit ? Number(req.query.limit) : 20
+      );
+      sendSuccess(res, result, 200);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async adminDeleteListing(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await ListingService.adminDeleteListing(
+        req.user!.userId,
+        req.params.listingId,
+        req.traceId,
+        req.ip
+      );
+      sendSuccess(res, result, 200, 'Listing deleted.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async getListingReviewQueue(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const page = req.query.page ? Number(req.query.page) : 1;
+      const limit = req.query.limit ? Number(req.query.limit) : 20;
+      sendSuccess(res, await ListingService.getPendingReviewListings(page, limit), 200);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  public static async reviewListing(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await ListingService.reviewListing(
+        req.user!.userId,
+        req.params.listingId,
+        req.body.action,
+        req.traceId,
+        req.ip
+      );
+      sendSuccess(res, result, 200, `Listing ${result.status.toLowerCase()}.`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   /**
    * 11.1 Submit Abuse or Fraud Report
    * POST /api/v1/reports

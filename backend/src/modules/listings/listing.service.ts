@@ -19,6 +19,7 @@ export interface CreateListingInput {
   description: string;
   category: string;
   subCategory?: string;
+  specifications?: Array<{ key: string; value: string }>;
   price: number;
   isNegotiable?: boolean;
   condition: 'BRAND_NEW' | 'LIKE_NEW' | 'USED' | 'FOR_PARTS';
@@ -171,12 +172,23 @@ export class ListingService {
     }
 
     // 4. Construct Listing Document
+    const slugBase = data.title
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 70) || 'listing';
+    const slug = `${slugBase}-${crypto.randomBytes(3).toString('hex')}`;
+
     const listing = new Listing({
       sellerId: user._id,
+      slug,
       title: data.title,
       description: data.description,
       category: data.category,
       subCategory: data.subCategory,
+      specifications: data.specifications || [],
       price: data.price,
       isNegotiable: Boolean(data.isNegotiable),
       condition: data.condition,
@@ -190,7 +202,7 @@ export class ListingService {
         },
       },
       images: processedImages,
-      status: 'ACTIVE',
+      status: 'PENDING',
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days TTL
     });
 
@@ -299,24 +311,27 @@ export class ListingService {
    * 5.3 Get Single Listing Details & Atomic View Count Increment
    */
   public static async getListingDetails(listingId: string, clientIp: string) {
-    const listing = await Listing.findById(listingId).populate(
+    const lookup = /^[0-9a-fA-F]{24}$/.test(listingId)
+      ? { _id: listingId }
+      : { slug: listingId };
+    const listing = await Listing.findOne(lookup).populate(
       'sellerId',
       'profile.displayName profile.avatarUrl profile.bio profile.division profile.district profile.thana isNidVerified ratingAverage ratingCount createdAt'
     );
 
-    if (!listing || listing.status === 'DELETED') {
+    if (!listing || ['DELETED', 'PENDING', 'REJECTED', 'SUSPENDED'].includes(listing.status)) {
       throw new NotFoundError('Listing not found or has been removed');
     }
 
     // Deduplicate views via Redis per IP per listing (10 minutes window)
     try {
       const redis = getRedisClient();
-      const viewKey = `view:${listingId}:${clientIp}`;
+      const viewKey = `view:${listing._id.toString()}:${clientIp}`;
       const alreadyViewed = await redis.get(viewKey);
 
       if (!alreadyViewed) {
         await redis.set(viewKey, '1', 'EX', 600);
-        await Listing.findByIdAndUpdate(listingId, { $inc: { 'metrics.viewsCount': 1 } });
+        await Listing.findByIdAndUpdate(listing._id, { $inc: { 'metrics.viewsCount': 1 } });
         listing.metrics.viewsCount += 1;
       }
     } catch (err) {
@@ -485,6 +500,95 @@ export class ListingService {
       totalPages: Math.ceil(total / limit),
       listings,
     };
+  }
+
+  public static async getPendingReviewListings(page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
+    const [total, listings] = await Promise.all([
+      Listing.countDocuments({ status: 'PENDING' }),
+      Listing.find({ status: 'PENDING' })
+        .populate('sellerId', 'profile.displayName mobileNumber isNidVerified')
+        .sort({ createdAt: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+
+    return { total, page, limit, listings };
+  }
+
+  public static async reviewListing(
+    adminId: string,
+    listingId: string,
+    action: 'APPROVE' | 'REJECT' | 'DELETE',
+    traceId: string,
+    clientIp?: string
+  ) {
+    const nextStatus = action === 'APPROVE' ? 'ACTIVE' : action === 'REJECT' ? 'REJECTED' : 'DELETED';
+    const listing = await Listing.findOneAndUpdate(
+      { _id: listingId, status: 'PENDING' },
+      { $set: { status: nextStatus } },
+      { new: true }
+    );
+
+    if (!listing) {
+      throw new NotFoundError('Pending listing not found or already reviewed');
+    }
+
+    await this.logAuditEvent({
+      traceId,
+      userId: adminId,
+      actorRole: 'admin',
+      action: action === 'REJECT' ? 'LISTING_REJECTED' : `LISTING_${action}D`,
+      entityType: 'LISTING',
+      entityId: listingId,
+      ipAddress: clientIp,
+      metadata: { status: nextStatus, title: listing.title },
+    });
+
+    return { listingId, status: nextStatus };
+  }
+
+  public static async getAdminListings(params: { q?: string; status?: string }, page = 1, limit = 20) {
+    const filter: Record<string, any> = {};
+    if (params.status) filter.status = params.status;
+    if (params.q?.trim()) {
+      const term = params.q.trim();
+      filter.$or = [{ title: { $regex: term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } }];
+      if (Types.ObjectId.isValid(term)) filter.$or.push({ _id: new Types.ObjectId(term) });
+    }
+
+    const [total, listings] = await Promise.all([
+      Listing.countDocuments(filter),
+      Listing.find(filter)
+        .populate('sellerId', 'profile.displayName mobileNumber')
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+    ]);
+    return { total, page, limit, listings };
+  }
+
+  public static async adminDeleteListing(adminId: string, listingId: string, traceId: string, clientIp?: string) {
+    const listing = await Listing.findOneAndUpdate(
+      { _id: listingId, status: { $ne: 'DELETED' } },
+      { $set: { status: 'DELETED' } },
+      { new: false }
+    );
+    if (!listing) throw new NotFoundError('Listing not found or already deleted');
+
+    await this.logAuditEvent({
+      traceId,
+      userId: adminId,
+      actorRole: 'admin',
+      action: 'LISTING_ADMIN_DELETED',
+      entityType: 'LISTING',
+      entityId: listingId,
+      ipAddress: clientIp,
+      metadata: { title: listing.title, previousStatus: listing.status },
+    });
+    return { listingId, status: 'DELETED' };
   }
 }
 

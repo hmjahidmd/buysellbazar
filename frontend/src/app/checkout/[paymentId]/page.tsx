@@ -88,11 +88,11 @@ export default function CheckoutPage() {
         }),
       });
 
-      alert(`Payment successful via ${selectedGateway}! Your ad is now boosted as a TOP AD.`);
-      router.push(`/listings/${targetId}`);
+      alert(`Payment successful via ${selectedGateway}. Your boost will be visible after the ad is approved.`);
+      router.push('/profile?submitted=pending');
     } catch (err: any) {
-      alert('Payment completed in simulated sandbox! Ad boosted as TOP AD.');
-      router.push(`/listings/${targetId}`);
+      alert('Payment completed in simulated sandbox. Your ad is waiting for review.');
+      router.push('/profile?submitted=pending');
     } finally {
       setIsProcessing(false);
     }
@@ -421,7 +421,7 @@ export default function CheckoutPage() {
                     ৳499.00 received via bKash. TrxID: <strong>{bkashTxnId}</strong>
                   </p>
                   <span className="inline-block mt-2 px-2.5 py-1 bg-amber-100 text-amber-800 font-bold text-xs rounded-lg">
-                    ✨ TOP AD Promotion Activated!
+                    TOP AD boost is ready after admin approval
                   </span>
                 </div>
 
@@ -429,11 +429,11 @@ export default function CheckoutPage() {
                   type="button"
                   onClick={() => {
                     setIsBkashModalOpen(false);
-                    router.push(`/listings/${targetId}`);
+                    router.push('/profile?submitted=pending');
                   }}
                   className="w-full py-2.5 bg-brand-primary hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-colors"
                 >
-                  View Boosted Listing
+                  View Review Status
                 </button>
               </div>
             )}

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../lib/api';
+import { fieldsForCategory } from '../../data/categoryFields';
 
 const CATEGORIES = [
   'Mobiles',
@@ -53,6 +54,8 @@ export default function PostAdPage() {
   const [selectedBoost, setSelectedBoost] = useState<'NONE' | 'TOP_AD_7D' | 'BUMP_UP'>('NONE');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [specValues, setSpecValues] = useState<Record<string, string>>({});
+  const specFields = fieldsForCategory(category);
 
   if (!isAuthenticated) {
     return (
@@ -176,12 +179,18 @@ export default function PostAdPage() {
     setError('');
     setIsSubmitting(true);
     try {
-      const res = await apiClient<{ listingId: string; status: string }>('/api/v1/listings', {
+      const specifications = Object.entries(specValues)
+        .filter(([, value]) => String(value || '').trim())
+        .map(([key, value]) => ({ key, value: String(value).trim() }));
+
+      const res = await apiClient<{ listingId: string; status: string; slug?: string; id?: string }>('/api/v1/listings', {
         method: 'POST',
         body: JSON.stringify({
           title,
           description,
           category,
+          subCategory: category,
+          specifications,
           price: Number(price),
           isNegotiable,
           condition,
@@ -194,12 +203,11 @@ export default function PostAdPage() {
         }),
       });
 
-      const newListingId = (res?.data as any)?.id || (res?.data as any)?._id || (res?.data as any)?.listingId;
-
+      const created = res?.data as any;
       if (selectedBoost !== 'NONE') {
-        router.push(`/checkout/${newListingId}?boost=${selectedBoost}`);
+        router.push(`/checkout/${created?.id || created?._id || created?.listingId}?boost=${selectedBoost}`);
       } else {
-        router.push(`/listings/${newListingId}`);
+        router.push('/profile?submitted=pending');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to publish listing');
@@ -238,6 +246,7 @@ export default function PostAdPage() {
                 key={cat}
                 onClick={() => {
                   setCategory(cat);
+                  setSpecValues({});
                   setStep(2);
                 }}
                 className={`p-4 rounded-2xl border text-center font-bold text-sm transition-all ${
@@ -311,6 +320,50 @@ export default function PostAdPage() {
                 </label>
               </div>
             </div>
+
+            {specFields.length > 0 && (
+              <div className="pt-2 space-y-3">
+                <h3 className="text-sm font-black text-slate-800">
+                  {category} specifications
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Same fields buyers see on demo ads (Brand, Model, year, fuel, etc. depending on category).
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {specFields.map((field) => (
+                    <div key={field.key}>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">{field.label}</label>
+                      {field.type === 'select' && field.options ? (
+                        <select
+                          value={specValues[field.key] || ''}
+                          onChange={(e) =>
+                            setSpecValues((prev) => ({ ...prev, [field.key]: e.target.value }))
+                          }
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold"
+                        >
+                          <option value="">Select {field.label}</option>
+                          {field.options.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="text"
+                          placeholder={field.placeholder}
+                          value={specValues[field.key] || ''}
+                          onChange={(e) =>
+                            setSpecValues((prev) => ({ ...prev, [field.key]: e.target.value }))
+                          }
+                          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">

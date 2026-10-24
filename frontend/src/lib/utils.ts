@@ -23,3 +23,8 @@ export function formatDate(dateString: string | Date): string {
     year: 'numeric',
   });
 }
+
+export function listingPath(listing: { slug?: string; title?: string; id?: string }): string {
+  const identifier = listing.slug || listing.id;
+  return identifier ? `/listings/${encodeURIComponent(identifier)}` : '/profile';
+}

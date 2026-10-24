@@ -21,7 +21,7 @@ import {
   Layers,
 } from 'lucide-react';
 import VerifiedBadge from '../components/ui/VerifiedBadge';
-import { formatPrice } from '../lib/utils';
+import { formatPrice, listingPath } from '../lib/utils';
 import { TOP_ADS as FEATURED_TOP_ADS, RECENT_LISTINGS as DEFAULT_RECENT_LISTINGS } from '../data/mockListings';
 import apiClient from '../lib/api';
 
@@ -57,6 +57,7 @@ export default function HomePage() {
         if (res.data && Array.isArray(res.data.results) && res.data.results.length > 0) {
           const formatted = res.data.results.map((item: any) => ({
             id: item._id || item.id,
+            slug: item.slug,
             title: item.title,
             price: item.price,
             condition: item.condition || 'USED',
@@ -184,7 +185,7 @@ export default function HomePage() {
           {FEATURED_TOP_ADS.map((ad) => (
             <Link
               key={ad.id}
-              href={`/listings/${ad.id}`}
+              href={listingPath({ slug: ad.slug, id: ad.id })}
               className="bg-white rounded-2xl border-2 border-amber-300 shadow-md hover:shadow-xl transition-all overflow-hidden flex flex-col group relative"
             >
               {/* Top Ad Badge */}

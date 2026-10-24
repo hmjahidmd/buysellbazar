@@ -17,6 +17,7 @@ export interface ListingSeller {
 
 export interface ListingItem {
   id: string;
+  slug?: string;
   title: string;
   price: number;
   isNegotiable: boolean;
@@ -382,8 +383,25 @@ Direct buyers only. Price slightly negotiable face to face. Please don't call wi
   },
 ];
 
+function toSlug(title: string): string {
+  return (title || 'listing')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80) || 'listing';
+}
+
+MOCK_LISTINGS.forEach((item) => {
+  if (!item.slug) item.slug = toSlug(item.title);
+});
+
 export const getMockListingById = (id: string): ListingItem | undefined => {
-  return MOCK_LISTINGS.find((item) => item.id === id);
+  return MOCK_LISTINGS.find(
+    (item) => item.id === id || item.slug === id || toSlug(item.title) === id
+  );
 };
 
 export const TOP_ADS = MOCK_LISTINGS.filter((item) => item.isTopAd);

@@ -42,29 +42,15 @@ export default function ChatRoomPage() {
     sellerVerified: boolean;
     image: string;
   }>({
-    title: 'Yamaha FZS V3 Dual Channel ABS 2023',
-    price: 285000,
-    sellerName: 'Tanvir Ahmed',
-    sellerVerified: true,
-    image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=150&q=80',
+    title: 'Listing',
+    price: 0,
+    sellerName: 'Marketplace member',
+    sellerVerified: false,
+    image: '/icon.svg',
   });
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'm1',
-      senderId: 'seller123',
-      content: 'As-salamu alaykum. Yes the item is available for inspection.',
-      type: 'TEXT',
-      createdAt: '10:14 AM',
-    },
-    {
-      id: 'm2',
-      senderId: user?.id || 'client123',
-      content: 'Walaikum assalam. Can I come inspect it tomorrow?',
-      type: 'TEXT',
-      createdAt: '10:16 AM',
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [chatError, setChatError] = useState('');
 
   const [inputContent, setInputContent] = useState('');
   const [hasScamWarning, setHasScamWarning] = useState(false);
@@ -89,7 +75,7 @@ export default function ChatRoomPage() {
             });
           }
         })
-        .catch(() => {});
+        .catch((err) => setChatError(err.message || 'Unable to load conversation'));
     }
   }, [listingId]);
 
@@ -116,17 +102,12 @@ export default function ChatRoomPage() {
   }, [isAuthenticated, roomId]);
 
   // Active Offer Pin state
-  const [activeOffer, setActiveOffer] = useState<{
+  const [activeOffer] = useState<{
     id: string;
     offeredPrice: number;
     status: 'PENDING' | 'ACCEPTED' | 'COUNTERED';
     buyerId: string;
-  }>({
-    id: 'off_99182',
-    offeredPrice: 275000,
-    status: 'ACCEPTED',
-    buyerId: user?.id || 'client123',
-  });
+  } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -134,35 +115,46 @@ export default function ChatRoomPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, hasScamWarning]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputContent.trim()) return;
+    if (!isAuthenticated) {
+      openLoginModal();
+      return;
+    }
 
     const currentText = inputContent.trim();
-    setInputContent('');
-
-    // Check scam regex on client side as well for instant feedback
-    const scamRegex =
-      /(bkash|nagad|rocket)\s*(advance|agrim|charge|delivery\s*fee|courier|fee|pathan|taka\s*pathan)|(কুরিয়ার\s*চার্জ|অগ্রিম|বিকাশ\s*করুন)/i;
-
-    const isScamMatch = scamRegex.test(currentText);
-
-    const newMsg: Message = {
-      id: `msg_${Date.now()}`,
-      senderId: user?.id || 'client123',
-      content: currentText,
-      type: 'TEXT',
-      isScamFlagged: isScamMatch,
-      createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setMessages((prev) => [...prev, newMsg]);
-
-    if (isScamMatch) {
-      setHasScamWarning(true);
-      setScamWarningText(
-        '⚠️ সতর্কতা: কোনো পণ্য বা কুরিয়ার ফি বাবদ অগ্রিম বিকাশ বা নগদ-এ টাকা পাঠাবেন না। পণ্য সামনাসামনি দেখে যাচাই করে লেনদেন করুন।'
+    setChatError('');
+    try {
+      const response = await apiClient<{ message: any; warningMessage?: any }>(
+        `/api/v1/chats/${roomId}/messages`,
+        { method: 'POST', body: JSON.stringify({ content: currentText }) }
       );
+      const saved = response.data.message;
+      setMessages((current) => [...current, {
+        id: saved._id || saved.id,
+        senderId: saved.senderId?._id || saved.senderId || user?.id || '',
+        content: saved.content,
+        type: saved.messageType || 'TEXT',
+        isScamFlagged: saved.isScamFlagged,
+        createdAt: new Date(saved.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }]);
+      if (response.data.warningMessage) {
+        const warning = response.data.warningMessage;
+        setMessages((current) => [...current, {
+          id: warning._id || warning.id,
+          senderId: warning.senderId?._id || warning.senderId || '',
+          content: warning.content,
+          type: 'SYSTEM_WARNING',
+          isScamFlagged: true,
+          createdAt: new Date(warning.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        }]);
+        setHasScamWarning(true);
+        setScamWarningText(warning.content);
+      }
+      setInputContent('');
+    } catch (err: any) {
+      setChatError(err.message || 'Message could not be sent');
     }
   };
 
@@ -233,10 +225,15 @@ export default function ChatRoomPage() {
         </div>
       )}
 
+      {chatError && <p role="alert" className="mt-2 text-sm text-rose-700">{chatError}</p>}
+
       {/* 4. Scrolling Message Feed */}
       <div className="flex-1 overflow-y-auto py-4 space-y-3">
+        {messages.length === 0 && !chatError && (
+          <p className="py-8 text-center text-sm text-slate-500">No messages yet. Start the conversation.</p>
+        )}
         {messages.map((m) => {
-          const isMe = m.senderId === (user?.id || 'client123');
+          const isMe = m.senderId === user?.id;
 
           return (
             <div

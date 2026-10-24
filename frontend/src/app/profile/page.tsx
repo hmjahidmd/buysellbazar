@@ -23,14 +23,17 @@ import {
   Bookmark,
   Calendar,
   Camera,
+  MessageSquare,
+  Eye,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import apiClient from '../../lib/api';
 import VerifiedBadge from '../../components/ui/VerifiedBadge';
-import { formatPrice } from '../../lib/utils';
+import { formatPrice, listingPath } from '../../lib/utils';
 
 interface MyListing {
   _id: string;
+  slug?: string;
   title: string;
   description: string;
   price: number;
@@ -48,7 +51,7 @@ interface MyListing {
     thumbnailUrl?: string;
     isPrimary?: boolean;
   }>;
-  status: 'ACTIVE' | 'SOLD' | 'PENDING' | 'EXPIRED' | 'REJECTED';
+  status: 'ACTIVE' | 'SOLD' | 'PENDING' | 'EXPIRED' | 'REJECTED' | 'SUSPENDED';
   metrics?: {
     viewsCount: number;
     chatLeadsCount: number;
@@ -72,6 +75,9 @@ export default function ProfilePage() {
   const [myListings, setMyListings] = useState<MyListing[]>([]);
   const [isLoadingAds, setIsLoadingAds] = useState(true);
   const [quota, setQuota] = useState<{ dailyAdCount: number; remainingToday: number } | null>(null);
+  const [savedListings, setSavedListings] = useState<any[]>([]);
+  const [inboxCount, setInboxCount] = useState(0);
+  const [submittedPending, setSubmittedPending] = useState(false);
 
   // Edit Modal State
   const [editingAd, setEditingAd] = useState<MyListing | null>(null);
@@ -88,6 +94,10 @@ export default function ProfilePage() {
   const [bio, setBio] = useState((user?.profile as any)?.bio || '');
   const [avatarUrl, setAvatarUrl] = useState(user?.profile?.avatarUrl || '');
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+
+  useEffect(() => {
+    setSubmittedPending(new URLSearchParams(window.location.search).get('submitted') === 'pending');
+  }, []);
 
   useEffect(() => {
     if (user?.profile?.displayName) {
@@ -146,11 +156,25 @@ export default function ProfilePage() {
     }
   };
 
+  const fetchBuyerDashboard = async () => {
+    try {
+      const [savedResponse, inboxResponse] = await Promise.all([
+        apiClient<{ listings: any[] }>('/api/v1/users/me/saved-listings'),
+        apiClient<{ inbox: any[] }>('/api/v1/chats'),
+      ]);
+      setSavedListings(savedResponse.data?.listings || []);
+      setInboxCount(inboxResponse.data?.inbox?.length || 0);
+    } catch (err) {
+      console.error('Failed to load buyer dashboard:', err);
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated) {
       refreshProfile();
       fetchMyListings();
       fetchQuota();
+      fetchBuyerDashboard();
     }
   }, [isAuthenticated]);
 
@@ -384,6 +408,26 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3" aria-label="Account activity">
+        {[
+          { label: 'Total ads', value: myListings.length, icon: Package },
+          { label: 'Live ads', value: myListings.filter((item) => item.status === 'ACTIVE').length, icon: CheckCircle2 },
+          { label: 'Listing views', value: myListings.reduce((total, item) => total + (item.metrics?.viewsCount || 0), 0), icon: Eye },
+          { label: 'Buyer conversations', value: inboxCount, icon: MessageSquare },
+        ].map(({ label, value, icon: Icon }) => (
+          <div key={label} className="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3">
+            <Icon size={19} className="text-brand-primary" />
+            <div><p className="text-lg font-black text-slate-900">{value}</p><p className="text-xs text-slate-500">{label}</p></div>
+          </div>
+        ))}
+      </section>
+
+      {submittedPending && (
+        <div role="status" className="border border-amber-300 bg-amber-50 text-amber-900 rounded-xl p-4 text-sm font-semibold">
+          Your ad has been submitted and is waiting for admin review. It will appear publicly after approval.
+        </div>
+      )}
+
       {/* Tabs Bar */}
       <div className="flex border-b border-slate-200 gap-8">
         <button
@@ -407,6 +451,17 @@ export default function ProfilePage() {
         >
           <UserIcon size={18} /> Profile & Settings
         </button>
+        <button
+          onClick={() => setActiveTab('SAVED')}
+          className={`pb-3 font-bold text-sm flex items-center gap-2 border-b-2 transition-all ${
+            activeTab === 'SAVED' ? 'border-brand-primary text-brand-primary' : 'border-transparent text-slate-500 hover:text-slate-900'
+          }`}
+        >
+          <Bookmark size={18} /> Saved ads ({savedListings.length})
+        </button>
+        <Link href="/chat" className="pb-3 font-bold text-sm flex items-center gap-2 text-slate-500 hover:text-slate-900">
+          <MessageSquare size={18} /> Messages ({inboxCount})
+        </Link>
       </div>
 
       {/* TAB CONTENT: MY ADS */}
@@ -512,10 +567,12 @@ export default function ProfilePage() {
                   {/* Actions Bar */}
                   <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2">
                     <Link
-                      href={`/listings/${listing._id}`}
+                      href={listingPath({ slug: listing.slug, id: listing._id })}
+                      aria-disabled={listing.status === 'PENDING'}
+                      onClick={(event) => listing.status === 'PENDING' && event.preventDefault()}
                       className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:text-brand-primary hover:border-brand-primary rounded-lg text-xs font-bold flex items-center gap-1 transition-all"
                     >
-                      <ExternalLink size={13} /> View
+                      <ExternalLink size={13} /> {listing.status === 'PENDING' ? 'Under review' : 'View'}
                     </Link>
 
                     <button
@@ -548,6 +605,24 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
+      )}
+
+      {activeTab === 'SAVED' && (
+        <section className="space-y-4">
+          <h2 className="text-lg font-black text-slate-800">Saved ads</h2>
+          {savedListings.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-xl p-10 text-center text-sm text-slate-500">You have not saved any listings yet.</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {savedListings.map((listing) => (
+                <Link key={listing._id} href={`/listings/${listing.slug || listing._id}`} className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-emerald-600">
+                  <img src={listing.images?.[0]?.thumbnailUrl || listing.images?.[0]?.url || '/icon.svg'} alt="" className="w-full aspect-[4/3] object-cover bg-slate-100" />
+                  <div className="p-3"><p className="text-sm font-bold text-slate-800 line-clamp-2">{listing.title}</p><p className="mt-1 text-sm font-black text-brand-primary">{formatPrice(listing.price)}</p></div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
       )}
 
       {/* TAB CONTENT: PROFILE & SETTINGS */}

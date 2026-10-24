@@ -5,6 +5,7 @@ import {
   searchListingSchema,
   updateListingSchema,
   listingIdParamSchema,
+  listingLookupParamSchema,
   myListingsQuerySchema,
 } from './listing.validation';
 import { requireAuth, requireNidVerified } from '../../core/middlewares/authGuards';
@@ -63,7 +64,7 @@ router.post(
 // 5.3 Get Single Listing Details (Public)
 router.get(
   '/:id',
-  validateRequest(listingIdParamSchema),
+  validateRequest(listingLookupParamSchema),
   ListingController.getById
 );
 

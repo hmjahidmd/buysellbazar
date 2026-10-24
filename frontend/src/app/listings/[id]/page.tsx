@@ -122,7 +122,8 @@ export default function ListingDetailPage() {
       return;
     }
     try {
-      const res = await apiClient<{ roomId: string }>(`/api/v1/chats/start/${listingId}`, {
+      const resolvedId = listing.id || listingId;
+      const res = await apiClient<{ roomId: string }>(`/api/v1/chats/start/${resolvedId}`, {
         method: 'POST',
       });
       if (res?.data?.roomId) {
@@ -132,7 +133,7 @@ export default function ListingDetailPage() {
     } catch (e: any) {
       console.warn('Chat start fallback:', e);
     }
-    router.push(`/chat/room_${listingId}_${user?.id || 'client'}`);
+    alert('Unable to start this conversation. Please try again.');
   };
 
   const handleMakeOffer = async (e: React.FormEvent) => {
@@ -149,7 +150,7 @@ export default function ListingDetailPage() {
 
     setIsSubmittingOffer(true);
     try {
-      await apiClient(`/api/v1/offers/${listingId}`, {
+      await apiClient(`/api/v1/offers/${listing.id || listingId}`, {
         method: 'POST',
         body: JSON.stringify({
           offeredPrice: Number(offerPrice),
@@ -157,7 +158,7 @@ export default function ListingDetailPage() {
       });
       setIsOfferModalOpen(false);
       alert('Your binding offer of ' + formatPrice(Number(offerPrice)) + ' has been sent to the seller!');
-      router.push(`/chat/room_${listingId}_${user?.id}`);
+      router.push(`/chat/room_${listing.id || listingId}_${user?.id}`);
     } catch (err: any) {
       alert(err.message || 'Failed to submit offer');
     } finally {

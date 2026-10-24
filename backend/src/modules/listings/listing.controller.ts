@@ -30,7 +30,7 @@ export class ListingController {
         traceId: req.traceId,
       });
 
-      sendSuccess(res, listing, 201, 'Listing published successfully.');
+      sendSuccess(res, listing, 201, 'Listing submitted for review.');
     } catch (error) {
       next(error);
     }

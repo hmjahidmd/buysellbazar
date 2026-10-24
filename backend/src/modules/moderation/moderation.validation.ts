@@ -97,6 +97,31 @@ export const banUserSchema = {
   }),
 };
 
+export const reviewQueueQuerySchema = {
+  query: z.object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+  }),
+};
+
+export const adminListingsQuerySchema = {
+  query: z.object({
+    q: z.string().trim().max(120).optional(),
+    status: z.enum(['PENDING', 'ACTIVE', 'HOLD', 'SOLD', 'EXPIRED', 'REJECTED', 'SUSPENDED', 'DELETED']).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+  }),
+};
+
+export const adminListingIdSchema = {
+  params: z.object({ listingId: z.string().regex(objectIdRegex, 'Invalid listing ID format') }),
+};
+
+export const reviewListingSchema = {
+  params: z.object({ listingId: z.string().regex(objectIdRegex, 'Invalid listing ID format') }),
+  body: z.object({ action: z.enum(['APPROVE', 'REJECT', 'DELETE']) }),
+};
+
 export const judicialExportSchema = {
   body: z
     .object({

@@ -1,7 +1,12 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
 export type ListingCondition = 'BRAND_NEW' | 'LIKE_NEW' | 'USED' | 'FOR_PARTS';
-export type ListingStatus = 'ACTIVE' | 'HOLD' | 'SOLD' | 'EXPIRED' | 'SUSPENDED' | 'DELETED';
+export type ListingStatus = 'PENDING' | 'ACTIVE' | 'HOLD' | 'SOLD' | 'EXPIRED' | 'REJECTED' | 'SUSPENDED' | 'DELETED';
+
+export interface IListingSpecification {
+  key: string;
+  value: string;
+}
 
 export interface IListingImage {
   url: string;
@@ -36,6 +41,7 @@ export interface IListingMetrics {
 export interface IListingDocument extends Document {
   _id: Types.ObjectId;
   sellerId: Types.ObjectId;
+  slug?: string;
   title: string;
   description: string;
   category: string;
@@ -45,6 +51,7 @@ export interface IListingDocument extends Document {
   condition: ListingCondition;
   location: IListingLocation;
   images: IListingImage[];
+  specifications: IListingSpecification[];
   status: ListingStatus;
   boost: IListingBoost;
   metrics: IListingMetrics;
@@ -59,6 +66,14 @@ const ListingImageSchema = new Schema<IListingImage>(
     thumbnailUrl: { type: String },
     perceptualHash: { type: String },
     isPrimary: { type: Boolean, default: false },
+  },
+  { _id: false }
+);
+
+const ListingSpecificationSchema = new Schema<IListingSpecification>(
+  {
+    key: { type: String, required: true, trim: true },
+    value: { type: String, required: true, trim: true },
   },
   { _id: false }
 );
@@ -110,6 +125,7 @@ const ListingSchema = new Schema<IListingDocument>(
       required: true,
       index: true,
     },
+    slug: { type: String, unique: true, sparse: true },
     title: {
       type: String,
       required: true,
@@ -153,10 +169,11 @@ const ListingSchema = new Schema<IListingDocument>(
       validate: [(val: IListingImage[]) => val.length <= 10, 'Maximum 10 images allowed'],
       default: [],
     },
+    specifications: { type: [ListingSpecificationSchema], default: [] },
     status: {
       type: String,
-      enum: ['ACTIVE', 'HOLD', 'SOLD', 'EXPIRED', 'SUSPENDED', 'DELETED'],
-      default: 'ACTIVE',
+      enum: ['PENDING', 'ACTIVE', 'HOLD', 'SOLD', 'EXPIRED', 'REJECTED', 'SUSPENDED', 'DELETED'],
+      default: 'PENDING',
       index: true,
     },
     boost: {

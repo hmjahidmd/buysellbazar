@@ -14,6 +14,10 @@ describe('Phase 15: Listing Quota & Rolling 30-Ad Limit Integration Test', () =>
       thana: 'Mirpur',
     },
     images: [{ url: 'https://cdn.marketplace.com.bd/listings/sample.webp' }],
+    specifications: [
+      { key: 'Brand', value: 'Yamaha' },
+      { key: 'Year of Manufacture', value: '2023' },
+    ],
   };
 
   test('1. Validates valid listing creation payload', () => {
@@ -35,7 +39,15 @@ describe('Phase 15: Listing Quota & Rolling 30-Ad Limit Integration Test', () =>
     expect(invalidDesc.success).toBe(false);
   });
 
-  test('3. Enforces rolling 24-hour 30-ad quota guard logic', () => {
+  test('3. Accepts category specifications submitted by registered sellers', () => {
+    const result = createListingSchema.body.safeParse(sampleListing);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.specifications).toEqual(sampleListing.specifications);
+    }
+  });
+
+  test('4. Enforces rolling 24-hour 30-ad quota guard logic', () => {
     const MAX_DAILY_ADS = 30;
 
     // Simulate user with 30 active ads

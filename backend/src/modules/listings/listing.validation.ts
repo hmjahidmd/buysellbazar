@@ -6,6 +6,10 @@ export const createListingSchema = {
     description: z.string().trim().min(10, 'Description must be at least 10 characters').max(3000),
     category: z.string().trim().min(2, 'Category is required'),
     subCategory: z.string().trim().optional(),
+    specifications: z.array(z.object({
+      key: z.string().trim().min(1).max(80),
+      value: z.string().trim().min(1).max(200),
+    })).max(50).optional(),
     price: z.coerce.number().min(0, 'Price must be 0 (free) or greater'),
     isNegotiable: z.coerce.boolean().default(false),
     condition: z.enum(['BRAND_NEW', 'LIKE_NEW', 'USED', 'FOR_PARTS']),
@@ -63,9 +67,15 @@ export const listingIdParamSchema = {
   }),
 };
 
+export const listingLookupParamSchema = {
+  params: z.object({
+    id: z.string().trim().min(1).max(180),
+  }),
+};
+
 export const myListingsQuerySchema = {
   query: z.object({
-    status: z.enum(['ACTIVE', 'HOLD', 'SOLD', 'EXPIRED', 'SUSPENDED', 'DELETED']).optional(),
+    status: z.enum(['PENDING', 'ACTIVE', 'HOLD', 'SOLD', 'EXPIRED', 'REJECTED', 'SUSPENDED', 'DELETED']).optional(),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(50).default(20),
   }),
@@ -76,5 +86,6 @@ export default {
   searchListingSchema,
   updateListingSchema,
   listingIdParamSchema,
+  listingLookupParamSchema,
   myListingsQuerySchema,
 };

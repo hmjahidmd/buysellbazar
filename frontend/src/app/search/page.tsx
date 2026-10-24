@@ -15,7 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import VerifiedBadge from '../../components/ui/VerifiedBadge';
-import { formatPrice } from '../../lib/utils';
+import { formatPrice, listingPath } from '../../lib/utils';
 import apiClient from '../../lib/api';
 import { MOCK_LISTINGS } from '../../data/mockListings';
 
@@ -66,6 +66,7 @@ function SearchContent() {
         if (res.data && Array.isArray(res.data.results) && res.data.results.length > 0) {
           const liveFormatted = res.data.results.map((item: any) => ({
             id: item._id || item.id,
+            slug: item.slug,
             title: item.title,
             description: item.description || '',
             category: item.category || 'Mobiles',
@@ -288,7 +289,7 @@ function SearchContent() {
             {filteredListings.map((ad) => (
               <Link
                 key={ad.id}
-                href={`/listings/${ad.id}`}
+                href={listingPath({ slug: ad.slug, id: ad.id })}
                 className={`bg-white rounded-2xl border ${
                   ad.isTopAd ? 'border-amber-300 shadow-md ring-1 ring-amber-200' : 'border-slate-200'
                 } hover:shadow-lg transition-all overflow-hidden flex flex-col group relative`}

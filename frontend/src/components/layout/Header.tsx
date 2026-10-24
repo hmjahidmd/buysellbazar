@@ -130,7 +130,7 @@ export const Header: React.FC = () => {
             {isAuthenticated ? (
               <div className="flex items-center gap-2">
                 <Link
-                  href="/chat/inbox"
+                  href="/chat"
                   className="p-2 text-slate-600 hover:text-brand-primary hover:bg-slate-100 rounded-lg transition-colors relative"
                   title="Messages"
                 >

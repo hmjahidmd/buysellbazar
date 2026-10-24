@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ShieldAlert,
   CheckCircle2,
@@ -18,7 +18,7 @@ import apiClient from '../../../lib/api';
 export default function ModerationPortalPage() {
   const { user, isAuthenticated } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'QUEUE' | 'BAN_ACTION'>('QUEUE');
+  const [activeTab, setActiveTab] = useState<'LISTINGS' | 'ALL_LISTINGS' | 'QUEUE' | 'BAN_ACTION'>('LISTINGS');
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
   const [resolutionVerdict, setResolutionVerdict] = useState<'ACTION_TAKEN' | 'DISMISSED'>('ACTION_TAKEN');
   const [resolutionAction, setResolutionAction] = useState<
@@ -33,30 +33,64 @@ export default function ModerationPortalPage() {
   const [isBanning, setIsBanning] = useState(false);
 
   // Mock Queue
-  const [reports, setReports] = useState([
-    {
-      reportId: '65f2a1b9c9e77a001f3b3001',
-      ticketNumber: 'REP-202610-8912',
-      targetType: 'LISTING',
-      targetId: '65f2a1b9c9e77a001f3b2001',
-      reason: 'SCAM',
-      description: 'Seller asked for bKash 2,000 BDT advance courier charge before shipping the bike.',
-      reporterPhone: '01712345678',
-      status: 'SUBMITTED',
-      createdAt: '15 mins ago',
-    },
-    {
-      reportId: '65f2a1b9c9e77a001f3b3002',
-      ticketNumber: 'REP-202610-8913',
-      targetType: 'USER',
-      targetId: '65f2a1b9c9e77a001f3b1009',
-      reason: 'FRAUD',
-      description: 'User created multiple accounts using forged selfie image.',
-      reporterPhone: '01899999999',
-      status: 'SUBMITTED',
-      createdAt: '1 hour ago',
-    },
-  ]);
+  const [reports, setReports] = useState<any[]>([]);
+  const [pendingListings, setPendingListings] = useState<any[]>([]);
+  const [isLoadingListings, setIsLoadingListings] = useState(true);
+  const [allListings, setAllListings] = useState<any[]>([]);
+  const [listingSearch, setListingSearch] = useState('');
+  const [listingStatus, setListingStatus] = useState('');
+
+  useEffect(() => {
+    if (!isAuthenticated || !['admin', 'moderator'].includes(user?.role || '')) {
+      setIsLoadingListings(false);
+      return;
+    }
+    Promise.all([
+      apiClient<{ listings: any[] }>('/api/v1/admin/moderation/listings/queue'),
+      apiClient<{ queue: any[] }>('/api/v1/admin/moderation/queue'),
+    ])
+      .then(([listingRes, reportRes]) => {
+        setPendingListings(listingRes.data?.listings || []);
+        setReports(reportRes.data?.queue || []);
+      })
+      .catch((err) => alert(err.message || 'Unable to load moderation queue'))
+      .finally(() => setIsLoadingListings(false));
+  }, [isAuthenticated, user?.role]);
+
+  const fetchAllListings = async (event?: React.FormEvent) => {
+    event?.preventDefault();
+    try {
+      const response = await apiClient<{ listings: any[] }>('/api/v1/admin/moderation/listings', {
+        params: { q: listingSearch || undefined, status: listingStatus || undefined },
+      });
+      setAllListings(response.data?.listings || []);
+    } catch (err: any) {
+      alert(err.message || 'Unable to load listings');
+    }
+  };
+
+  const deleteAnyListing = async (listingId: string) => {
+    if (!confirm('Delete this listing from the marketplace?')) return;
+    try {
+      await apiClient(`/api/v1/admin/moderation/listings/${listingId}`, { method: 'DELETE' });
+      setAllListings((current) => current.filter((item) => item._id !== listingId));
+      setPendingListings((current) => current.filter((item) => item._id !== listingId));
+    } catch (err: any) {
+      alert(err.message || 'Unable to delete listing');
+    }
+  };
+
+  const handleReviewListing = async (listingId: string, action: 'APPROVE' | 'REJECT' | 'DELETE') => {
+    try {
+      await apiClient(`/api/v1/admin/moderation/listings/${listingId}/review`, {
+        method: 'PATCH',
+        body: JSON.stringify({ action }),
+      });
+      setPendingListings((current) => current.filter((item) => item._id !== listingId));
+    } catch (err: any) {
+      alert(err.message || 'Unable to review listing');
+    }
+  };
 
   const handleResolveTicket = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,10 +111,8 @@ export default function ModerationPortalPage() {
       setReports((prev) => prev.filter((r) => r.reportId !== selectedTicket.reportId));
       setSelectedTicket(null);
       alert('Moderation ticket resolved and logged to cryptographic WORM audit chain.');
-    } catch {
-      setReports((prev) => prev.filter((r) => r.reportId !== selectedTicket.reportId));
-      setSelectedTicket(null);
-      alert('Mock: Ticket resolved and logged successfully.');
+    } catch (err: any) {
+      alert(err.message || 'Unable to resolve report');
     } finally {
       setIsResolving(false);
     }
@@ -112,6 +144,16 @@ export default function ModerationPortalPage() {
     }
   };
 
+  if (!isAuthenticated || !['admin', 'moderator'].includes(user?.role || '')) {
+    return (
+      <main className="max-w-xl mx-auto my-16 px-4 text-center">
+        <Lock size={36} className="mx-auto text-slate-400" />
+        <h1 className="mt-4 text-xl font-bold text-slate-900">Admin access required</h1>
+        <p className="mt-2 text-sm text-slate-500">Sign in with an authorized moderator or admin account to review ads.</p>
+      </main>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Header */}
@@ -133,6 +175,25 @@ export default function ModerationPortalPage() {
         {/* Tab switch */}
         <div className="flex bg-slate-200 p-1 rounded-xl text-xs font-bold">
           <button
+            onClick={() => {
+              setActiveTab('ALL_LISTINGS');
+              void fetchAllListings();
+            }}
+            className={`px-4 py-1.5 rounded-lg transition-all ${
+              activeTab === 'ALL_LISTINGS' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+            }`}
+          >
+            All ads
+          </button>
+          <button
+            onClick={() => setActiveTab('LISTINGS')}
+            className={`px-4 py-1.5 rounded-lg transition-all ${
+              activeTab === 'LISTINGS' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+            }`}
+          >
+            Ads for review ({pendingListings.length})
+          </button>
+          <button
             onClick={() => setActiveTab('QUEUE')}
             className={`px-4 py-1.5 rounded-lg transition-all ${
               activeTab === 'QUEUE' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
@@ -151,7 +212,57 @@ export default function ModerationPortalPage() {
         </div>
       </div>
 
-      {activeTab === 'QUEUE' ? (
+      {activeTab === 'ALL_LISTINGS' ? (
+        <section className="space-y-4">
+          <form onSubmit={fetchAllListings} className="flex flex-col sm:flex-row gap-2">
+            <input value={listingSearch} onChange={(event) => setListingSearch(event.target.value)} placeholder="Search title or listing ID" className="flex-1 p-3 bg-white border border-slate-200 rounded-lg text-sm" />
+            <select value={listingStatus} onChange={(event) => setListingStatus(event.target.value)} className="p-3 bg-white border border-slate-200 rounded-lg text-sm">
+              <option value="">All statuses</option>
+              {['PENDING', 'ACTIVE', 'HOLD', 'SOLD', 'EXPIRED', 'REJECTED', 'SUSPENDED', 'DELETED'].map((status) => <option key={status}>{status}</option>)}
+            </select>
+            <button type="submit" className="px-4 py-2 bg-brand-primary text-white rounded-lg font-bold">Search</button>
+          </form>
+          <div className="bg-white rounded-xl border border-slate-200 divide-y divide-slate-100">
+            {allListings.length === 0 ? <p className="p-6 text-center text-sm text-slate-500">No matching listings.</p> : allListings.map((listing) => (
+              <article key={listing._id} className="flex items-center gap-4 p-4">
+                <img src={listing.images?.[0]?.thumbnailUrl || listing.images?.[0]?.url || '/icon.svg'} alt="" className="w-14 h-14 rounded-lg object-cover bg-slate-100" />
+                <div className="min-w-0 flex-1"><p className="font-bold text-sm text-slate-900 truncate">{listing.title}</p><p className="text-xs text-slate-500">{listing.status} · {listing.sellerId?.profile?.displayName || listing.sellerId?.mobileNumber || 'Seller'}</p></div>
+                {listing.status !== 'DELETED' && <button onClick={() => deleteAnyListing(listing._id)} title="Delete listing" className="p-2 text-rose-700 hover:bg-rose-50 rounded-lg"><Ban size={17} /></button>}
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : activeTab === 'LISTINGS' ? (
+        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+          {isLoadingListings ? (
+            <p className="p-8 text-center text-sm text-slate-500">Loading pending listings...</p>
+          ) : pendingListings.length === 0 ? (
+            <p className="p-8 text-center text-sm text-slate-500">No ads are waiting for review.</p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {pendingListings.map((listing) => (
+                <article key={listing._id} className="grid grid-cols-[72px_1fr_auto] gap-4 p-4 items-center">
+                  <img
+                    src={listing.images?.[0]?.thumbnailUrl || listing.images?.[0]?.url || '/icon.svg'}
+                    alt=""
+                    className="w-[72px] h-[72px] rounded-lg object-cover bg-slate-100"
+                  />
+                  <div className="min-w-0">
+                    <h2 className="font-bold text-slate-900 truncate">{listing.title}</h2>
+                    <p className="text-xs text-slate-500">{listing.category} · ৳{Number(listing.price).toLocaleString()} · {listing.sellerId?.profile?.displayName || listing.sellerId?.mobileNumber}</p>
+                    <p className="text-xs text-slate-500 truncate">{listing.description}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleReviewListing(listing._id, 'APPROVE')} title="Approve and publish" className="p-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"><CheckCircle2 size={16} /></button>
+                    <button onClick={() => handleReviewListing(listing._id, 'REJECT')} title="Reject listing" className="p-2 rounded-lg bg-amber-100 text-amber-800 hover:bg-amber-200"><XCircle size={16} /></button>
+                    <button onClick={() => handleReviewListing(listing._id, 'DELETE')} title="Delete listing" className="p-2 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200"><Ban size={16} /></button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'QUEUE' ? (
         <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-bold">
