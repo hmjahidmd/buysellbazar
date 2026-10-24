@@ -61,17 +61,17 @@ export const Header: React.FC = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2 md:flex-nowrap md:justify-between md:h-16 md:gap-4 md:py-0">
+        <div className="flex flex-wrap items-center gap-x-1 gap-y-2 py-2 md:flex-nowrap md:justify-between md:h-16 md:gap-4 md:py-0">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-10 h-10 rounded-xl bg-brand-primary flex items-center justify-center text-white font-black text-xl tracking-tighter shadow-md">
+          <Link href="/" className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-primary text-lg font-black tracking-tighter text-white shadow-md sm:h-10 sm:w-10 sm:text-xl">
               BS
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-black tracking-tight text-slate-900 leading-none">
+              <span className="text-lg font-black leading-none tracking-tight text-slate-900 sm:text-xl">
                 BuySell<span className="text-brand-primary">BD</span>
               </span>
-              <span className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase">
+              <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400 sm:text-[10px]">
                 Verified Classifieds
               </span>
             </div>
@@ -130,7 +130,7 @@ export const Header: React.FC = () => {
           </form>
 
           {/* User & Actions */}
-          <div className="ml-auto flex shrink-0 items-center gap-1.5 md:gap-3">
+          <div className="ml-auto flex shrink-0 items-center gap-1 md:gap-3">
             {isAuthenticated ? (
               <div className="flex items-center gap-1 md:gap-2">
                 <Link
