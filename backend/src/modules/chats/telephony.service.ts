@@ -104,7 +104,7 @@ export class TelephonyService {
 
     // Telephony Bridge Session Setup (Virtual Number Masking)
     const sessionId = uuidv4();
-    const virtualBridgeNumber = '+8809612345678'; // Dedicated BTRC-compliant virtual VoIP DID
+    const virtualBridgeNumber = '+8801791373280'; // Dedicated BTRC-compliant virtual VoIP DID
     const maxDurationSeconds = 600; // 10 minutes session limit
     const expiresAt = new Date(Date.now() + maxDurationSeconds * 1000);
 

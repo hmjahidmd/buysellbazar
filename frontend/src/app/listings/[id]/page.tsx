@@ -182,7 +182,7 @@ export default function ListingDetailPage() {
     } catch {
       // Demo fallback
       setProxySession({
-        bridgeNumber: '+8809612345678',
+        bridgeNumber: '+8801791373280',
         sessionId: 'PROXY_SESS_991823',
       });
       setIsMaskedCallActive(true);

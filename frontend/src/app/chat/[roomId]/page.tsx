@@ -184,7 +184,7 @@ export default function ChatRoomPage() {
         </div>
 
         <button
-          onClick={() => alert('Dialing virtual proxy bridge number: +8809612345678 (Real phone masked)')}
+          onClick={() => alert('Dialing virtual proxy bridge number: +8801791373280 (Real phone masked)')}
           className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-brand-primary text-xs font-bold rounded-xl transition-colors"
         >
           <PhoneCall size={16} /> <span className="hidden sm:inline">Call (Masked)</span>

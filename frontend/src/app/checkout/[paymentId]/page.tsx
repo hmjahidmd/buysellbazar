@@ -29,13 +29,13 @@ export default function CheckoutPage() {
   const targetId = params.paymentId as string;
 
   const [selectedGateway, setSelectedGateway] = useState('BKASH');
-  const [customerPhone, setCustomerPhone] = useState('01712345678');
+  const [customerPhone, setCustomerPhone] = useState('01791373280');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // bKash Sandbox Modal States
   const [isBkashModalOpen, setIsBkashModalOpen] = useState(false);
   const [bkashStep, setBkashStep] = useState<'NUMBER' | 'OTP' | 'PIN' | 'SUCCESS'>('NUMBER');
-  const [bkashNumber, setBkashNumber] = useState('01712345678');
+  const [bkashNumber, setBkashNumber] = useState('01791373280');
   const [bkashOtp, setBkashOtp] = useState('123456');
   const [bkashPin, setBkashPin] = useState('12345');
   const [bkashTxnId, setBkashTxnId] = useState('');
